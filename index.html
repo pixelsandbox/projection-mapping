@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mario Wall · Projection mapping</title>
+  <meta name="description" content="Map your wall, drop in Mario characters, and play it with music.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23f8b800'/%3E%3Cpath d='M5 5h6v2H9v1H7V7H5zM7 10h2v2H7z' fill='%23883000'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="on-editor">
+  <!-- The projected picture. Everything black = no light on the wall. -->
+  <div id="stage"><img id="photo" alt=""><canvas id="cv"></canvas></div>
+  <div id="editLayer"></div>
+  <div id="pinLayer"><div class="pinh"></div><div class="pinh"></div><div class="pinh"></div><div class="pinh"></div></div>
+
+  <!-- ============ EDITOR ============ -->
+  <section id="editor" class="screen">
+    <header class="topbar">
+      <div class="tb-group">
+        <span class="brand"><canvas id="brandIcon" width="32" height="32"></canvas>Mario Wall</span>
+        <button class="btn ghost" id="helpBtn" data-tip="Help me learn|A short animated walkthrough of everything on this page: drawing boxes, skins, characters, motion, corner fit and playing."><span data-icon="help"></span>Help me learn</button>
+      </div>
+      <div class="tb-group center">
+        <button class="btn magic" id="magic" data-tip="Build it for me|Instantly builds a complete Mario level: boxes, characters, enemies and items. Mario is always included. Tap again for a different one; Undo brings back the last one. If you already drew boxes, it keeps them and fills them in."><span data-icon="spark"></span>Build it for me</button>
+      </div>
+      <div class="tb-group">
+        <button class="ib" id="undo" data-icon="undo" data-tip="Undo|Step back your last change. Shortcut: Ctrl/Cmd + Z."></button>
+        <button class="ib" id="redo" data-icon="redo" data-tip="Redo|Bring back what you undid. Shortcut: Ctrl/Cmd + Shift + Z."></button>
+        <button class="ib" id="hidePanels" data-icon="eyeoff" data-tip="Hide tools|Hides every panel so the projector shows only your wall. Press H to bring them back."></button>
+        <button class="btn primary" id="savePlay" data-tip="Save &amp; play|Saves your wall and starts the show. You'll choose: react to your song, or play automatically.">Save &amp; play<span data-icon="play"></span></button>
+      </div>
+    </header>
+
+    <aside class="panel left" id="leftPanel">
+      <div class="sec">
+        <h6>Boxes</h6>
+        <div class="tools4">
+          <button class="tool" id="bAdd" data-tip="Add box|Drops a new box in the middle of the wall. Tip: you can also drag anywhere on the black area to draw one exactly where you want."><span data-icon="box"></span><em>Add</em></button>
+          <button class="tool" id="bDup" data-tip="Duplicate|Copies the selected box or character right next to it. Shortcut: Ctrl/Cmd + D."><span data-icon="copy"></span><em>Copy</em></button>
+          <button class="tool" id="bDel" data-tip="Delete|Removes the selected box or character. Mario can't be removed. Shortcut: Delete or Backspace."><span data-icon="trash"></span><em>Delete</em></button>
+          <button class="tool" id="bClear" data-tip="Clear all|Removes every box and element from the wall (Mario stays). You can undo it."><span data-icon="clear"></span><em>Clear</em></button>
+        </div>
+      </div>
+      <div class="sec">
+        <h6 id="skinHead">New box skin</h6>
+        <div class="skins" id="skins"></div>
+      </div>
+      <div class="sec">
+        <h6>Wall</h6>
+        <div class="toggles">
+          <button class="tg" id="tPin" data-tip="Corner fit|Projector at an angle so the picture looks tilted? Turn this on and drag the 4 yellow corners to the corners of your wall. Everything bends to fit."><span data-icon="pin"></span><em>Corner fit</em><i class="sw"></i></button>
+          <button class="tg" id="tPhoto" data-tip="Wall photo|Upload a photo of your wall and draw boxes on top of it, even away from the projector. It is only shown while editing, never projected."><span data-icon="image"></span><em>Wall photo</em><i class="sw"></i></button>
+          <div class="photo-row" id="photoRow" hidden>
+            <input type="range" id="photoOpacity" min="0.1" max="1" step="0.05" aria-label="Photo visibility" data-tip="Photo visibility|Make the wall photo lighter or stronger.">
+            <button class="mini" id="photoReplace" data-icon="reset" data-tip="Replace photo|Pick a different wall photo."></button>
+            <button class="mini" id="photoRemove" data-icon="trash" data-tip="Remove photo|Delete the wall photo."></button>
+          </div>
+          <button class="tg" id="tGlow" data-tip="Glow|Adds a soft light bloom around everything, like real neon on the wall. Turn off for the crispest pixels."><span data-icon="glow"></span><em>Glow</em><i class="sw"></i></button>
+          <button class="tg" id="tGrid" data-tip="Grid|Shows alignment lines across the whole wall to help you line things up."><span data-icon="grid"></span><em>Grid</em><i class="sw"></i></button>
+          <button class="tg" id="tSnap" data-tip="Snap|Moves and resizes in small fixed steps so edges line up neatly. Leave it off to place things freely on real objects."><span data-icon="magnet"></span><em>Snap</em><i class="sw"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <aside class="panel right" id="rightPanel">
+      <div class="tabs" id="tabs"></div>
+      <div class="palette" id="palette"></div>
+      <p class="pal-hint">Drag onto your wall · tap to drop</p>
+    </aside>
+
+    <div class="empty" id="empty">
+      <div class="empty-art"><div class="rect"><span class="cursor"></span></div></div>
+      <h3>Draw boxes over things on your wall</h3>
+      <p>Drag anywhere on the black area</p>
+    </div>
+
+    <div id="selbar"></div>
+    <div class="pinbar" id="pinbar">
+      <span>Drag the 4 corners to fit your wall</span>
+      <button class="btn glass sm" id="pinReset" data-tip="Reset|Put the 4 corners back to a straight, full-screen frame."><span data-icon="reset"></span>Reset</button>
+      <button class="btn primary sm" id="pinDone"><span data-icon="check"></span>Done</button>
+    </div>
+    <button class="pill" id="showPanels"><span data-icon="eye"></span>Show tools</button>
+  </section>
+
+  <!-- ============ PLAYER ============ -->
+  <section id="player" class="screen">
+    <div class="choose" id="choose">
+      <div class="ch-pane" data-state="pick">
+        <h2>How should your wall play?</h2>
+        <div class="cards">
+          <button class="card" id="pickMusic" data-tip="React to my song|Play any music near your computer. The wall listens through your microphone and moves to the beat.">
+            <span class="card-ic music" data-icon="music"></span>
+            <b>React to my song</b><em>Listens through your mic</em>
+          </button>
+          <button class="card" id="pickAuto" data-tip="Play automatically|Plays on its own with a built-in 8-bit soundtrack.">
+            <span class="card-ic play" data-icon="play"></span>
+            <b>Play automatically</b><em>Built-in 8-bit beat</em>
+          </button>
+        </div>
+      </div>
+      <div class="ch-pane" data-state="waiting">
+        <div class="mic-orb"><span data-icon="mic"></span></div>
+        <h2>Allow microphone access</h2>
+        <p class="ch-sub">Click <b>Allow</b> in your browser's prompt so the wall can hear your song.</p>
+        <button class="link" id="micCancel"><span data-icon="back"></span>Back</button>
+      </div>
+      <div class="ch-pane" data-state="denied">
+        <div class="mic-orb off"><span data-icon="micoff"></span></div>
+        <h2>Mic access needed</h2>
+        <p class="ch-sub" id="deniedText">To react to your song, allow the microphone for this site (click the icon left of the address bar), then try again.</p>
+        <div class="ch-actions">
+          <button class="btn primary" id="micRetry"><span data-icon="mic"></span>Give access</button>
+          <button class="btn glass" id="deniedAuto"><span data-icon="play"></span>Play automatically</button>
+        </div>
+        <button class="link" id="songFile"><span data-icon="file"></span>Use a song file instead</button>
+      </div>
+      <div class="choose-foot">
+        <button class="link" id="backEdit"><span data-icon="edit"></span>Back to editing</button>
+      </div>
+    </div>
+
+    <div class="listen-hint" id="listenHint"><span class="pulse"></span>Listening for music…</div>
+
+    <div class="dock" id="dock">
+      <button class="ib lg" id="dPlay" data-tip="Play / Pause|Pause or resume the show. Shortcut: Space."></button>
+      <button class="mode-chip" id="dMode" data-tip="Switch mode|Music reacts to sound from your mic. Auto plays on its own with the built-in beat. Click to switch."></button>
+      <button class="ib only-auto" id="dVol" data-tip="Sound|Turn the built-in music and sound effects on or off."></button>
+      <span class="meter only-music" id="meter" data-tip="Mic level|Shows how loud the music is that the wall hears."><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="d-sep"></span>
+      <button class="ib" id="dHud" data-icon="hud" data-tip="Score|Show or hide the coin counter and score in the corner of the wall."></button>
+      <button class="ib" id="dFull" data-icon="full" data-tip="Fullscreen|Fill the whole projector screen. Shortcut: F."></button>
+      <button class="ib" id="dEdit" data-icon="edit" data-tip="Edit wall|Go back to mapping and placing characters. Shortcut: E."></button>
+    </div>
+  </section>
+
+  <!-- ============ HELP ============ -->
+  <div class="help" id="help" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="help-card">
+      <button class="ib help-x" id="helpClose" data-icon="x" aria-label="Close"></button>
+      <div class="help-stage" id="helpStage"></div>
+      <div class="help-body">
+        <span class="help-step" id="helpStep"></span>
+        <h3 id="helpTitle"></h3>
+        <p id="helpText"></p>
+      </div>
+      <div class="help-foot">
+        <button class="btn glass sm" id="helpPrev"><span data-icon="back"></span>Back</button>
+        <div class="help-dots" id="helpDots"></div>
+        <button class="btn primary sm" id="helpNext">Next<span data-icon="arrow"></span></button>
+      </div>
+      <div class="help-progress"><i id="helpBar"></i></div>
+    </div>
+  </div>
+
+  <div class="tip" id="tip"></div>
+  <div class="toast" id="toast"></div>
+  <input type="file" id="photoInput" accept="image/*" hidden>
+  <input type="file" id="songInput" accept="audio/*" hidden>
+
+  <script src="js/font.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/help.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
